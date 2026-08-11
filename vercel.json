@@ -1,7 +1,0 @@
-{
-  "framework": null,
-  "buildCommand": "pnpm run -C backend build:vercel && mkdir -p api && cp backend/api/index.js api/index.js",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
-  ]
-}
