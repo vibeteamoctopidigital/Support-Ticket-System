@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm run build:vercel",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ]
+}
