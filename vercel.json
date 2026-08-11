@@ -1,7 +1,6 @@
 {
   "framework": null,
-  "installCommand": "cd backend && pnpm install --frozen-lockfile",
-  "buildCommand": "cd backend && pnpm run build:vercel && mkdir -p ../api && cp api/index.js ../api/index.js",
+  "buildCommand": "pnpm run -C backend build:vercel && mkdir -p api && cp backend/api/index.js api/index.js",
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
