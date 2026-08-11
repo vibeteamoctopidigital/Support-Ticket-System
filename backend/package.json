@@ -12,7 +12,7 @@
 		"build": "prisma generate && tsc && tsup",
 		"dev": "prisma generate && tsx watch src/index.ts",
 		"start": "node dist/index.js",
-		"build:vercel": "prisma generate && tsup --entry.index src/vercel-app.ts --out-dir api --format esm --sourcemap false --clean false --no-dts",
+		"build:vercel": "prisma generate && tsup --config tsup.vercel.config.ts",
 		"start:dev": "node --import=tsx --watch src/index.ts",
 		"start:prod": "node dist/index.js",
 		"seed": "node --import=tsx prisma/seed.ts",
