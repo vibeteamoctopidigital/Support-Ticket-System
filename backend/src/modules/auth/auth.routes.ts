@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authController } from "./auth.controller";
 import { validateRequest } from "../../utils/httpHandlers";
-import { connectSchema, loginSchema, changePasswordSchema, firstLoginPasswordSchema, mediaStorageSchema, impersonateSchema } from "./auth.schema";
+import { connectSchema, loginSchema, changePasswordSchema, firstLoginPasswordSchema, mediaStorageSchema, ghlConnectionSchema, impersonateSchema } from "./auth.schema";
 import { authenticate } from "../../middlewares/authenticate";
 import { authorize } from "../../middlewares/authorize";
 import { authRateLimiter } from "../../middlewares/strictRateLimiter";
@@ -18,6 +18,8 @@ router.post("/refresh", authRateLimiter, requireJsonContent, authController.refr
 
 // Owner sets/updates the media-storage sub-account credentials (validated live).
 router.put("/media-storage", authenticate, authorize("AGENCY_OWNER"), validateRequest(mediaStorageSchema), authController.updateMediaStorage);
+// Owner connects/reconnects the agency-level GHL account after signup (validated live).
+router.put("/ghl-connection", authenticate, authorize("AGENCY_OWNER"), validateRequest(ghlConnectionSchema), authController.updateGhlConnection);
 router.post("/impersonate", authenticate, authorize("AGENCY_OWNER"), validateRequest(impersonateSchema), authController.impersonate);
 router.post("/change-password", authenticate, validateRequest(changePasswordSchema), authController.changePassword);
 router.post("/first-login-password", authenticate, validateRequest(firstLoginPasswordSchema), authController.firstLoginPassword);

@@ -52,6 +52,26 @@ export interface GhlLocation {
   timezone?: string;
 }
 
+export interface GhlCalendarEvent {
+  id: string;
+  calendarId?: string;
+  title?: string;
+  appointmentStatus?: string; // "new" | "confirmed" | "cancelled" | "showed" | "noshow" | "invalid"
+  contactId?: string;
+  notes?: string;
+  startTime: string;
+  endTime: string;
+}
+
+export interface GhlContact {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface GhlUser {
   id: string;
   name?: string;
@@ -347,6 +367,65 @@ export const ghlClient = {
       await sleep(THROTTLE_GAP_MS);
     }
     return all;
+  },
+
+  /**
+   * GET /calendars/events — booked events for a calendar within a time window.
+   * ASSUMED — pending live confirmation (no agency has connected a real GHL
+   * key in this codebase yet, so this has never run against production GHL).
+   * locationId and a startTime/endTime window (epoch ms) are required by the
+   * documented v2 API; calendarId narrows to one calendar. Fields are parsed
+   * defensively since the exact event shape isn't live-verified.
+   */
+  async listCalendarEvents(
+    apiKey: string,
+    locationId: string,
+    calendarId: string,
+    startTimeMs: number,
+    endTimeMs: number,
+  ): Promise<GhlCalendarEvent[]> {
+    const data = await ghlGet<{ events?: Record<string, any>[] }>({
+      apiKey,
+      path: "/calendars/events",
+      query: { locationId, calendarId, startTime: startTimeMs, endTime: endTimeMs },
+    });
+    return (data.events ?? []).map((e) => ({
+      id: String(e.id ?? e._id),
+      calendarId: e.calendarId,
+      title: e.title,
+      appointmentStatus: e.appointmentStatus ?? e.status,
+      contactId: e.contactId,
+      notes: e.notes,
+      startTime: e.startTime,
+      endTime: e.endTime,
+    }));
+  },
+
+  /**
+   * GET /contacts/{contactId} — enriches a calendar event with the booker's
+   * name/email/phone (events themselves only carry a contactId). ASSUMED —
+   * same caveat as listCalendarEvents.
+   */
+  async getContact(apiKey: string, contactId: string): Promise<GhlContact | null> {
+    try {
+      const data = await ghlGet<{ contact?: Record<string, any> }>({
+        apiKey,
+        path: `/contacts/${encodeURIComponent(contactId)}`,
+      });
+      const c = data.contact;
+      if (!c) return null;
+      return {
+        id: String(c.id ?? contactId),
+        name: c.contactName ?? c.name,
+        firstName: c.firstName,
+        lastName: c.lastName,
+        email: c.email,
+        phone: c.phone,
+      };
+    } catch (err) {
+      if (err instanceof GhlApiError && (err.httpStatus === 403 || err.httpStatus === 404)) return null;
+      throw err;
+    }
   },
 
   async listAllLocations(apiKey: string, companyId: string): Promise<GhlLocation[]> {

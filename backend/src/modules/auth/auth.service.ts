@@ -154,6 +154,67 @@ export class AuthService {
   }
 
   /**
+   * Lets an already-signed-up agency owner connect (or reconnect) their GHL
+   * account after the fact — /auth/connect only sets this at signup time, but
+   * agencies created another way (e.g. seeded) start with no GHL credentials
+   * at all, and PITs can also need rotating later.
+   *
+   * Accepts EITHER an agency-level PIT (validated via /locations/search) OR a
+   * location-level PIT scoped to ghlLocationId (validated via
+   * /locations/{id}) — VERIFIED LIVE that a location-scoped PIT can read
+   * /calendars/events for its own location, which is all appointments needs.
+   * The real companyId is discovered from GHL either way, never trusted from
+   * the form.
+   */
+  async updateGhlConnection(agencyId: string, actorId: string, dto: { ghlCompanyId: string; ghlApiKey: string; ghlLocationId: string }) {
+    let companyId: string | null = null;
+
+    const agencyValidation = await ghlClient.validateApiKey(dto.ghlApiKey, dto.ghlCompanyId);
+    if (agencyValidation.valid) {
+      companyId = dto.ghlCompanyId;
+    } else {
+      const location = await ghlClient.getLocation(dto.ghlApiKey, dto.ghlLocationId);
+      if (location?.companyId) {
+        companyId = location.companyId;
+      }
+    }
+
+    if (!companyId) {
+      throw unauthorized(
+        agencyValidation.reason ??
+          "GHL rejected this key for both agency-wide and location-scoped access. Check the token, Company ID, and Location ID.",
+        "GHL_KEY_INVALID",
+      );
+    }
+
+    const existingAgency = await prisma.agency.findUnique({ where: { ghlCompanyId: companyId } });
+    if (existingAgency && existingAgency.id !== agencyId) {
+      throw conflict("This GHL account is already connected to a different agency.", "ALREADY_CONNECTED");
+    }
+
+    await prisma.agency.update({
+      where: { id: agencyId },
+      data: {
+        ghlCompanyId: companyId,
+        ghlApiKeyEncrypted: encryptSecret(dto.ghlApiKey),
+        ghlMediaLocationId: dto.ghlLocationId,
+        connectedAt: new Date(),
+      },
+    });
+
+    await logAudit({
+      agencyId,
+      actorId,
+      action: "GHL_CONNECTED",
+      entityType: "Agency",
+      entityId: agencyId,
+      details: `Agency connected to GHL company ${dto.ghlCompanyId}`,
+    });
+
+    return { ghlCompanyId: dto.ghlCompanyId };
+  }
+
+  /**
    * Agency owner impersonates a team member — issues a fresh JWT for the
    * target user without requiring their password.
    *

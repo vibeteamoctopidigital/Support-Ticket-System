@@ -33,6 +33,7 @@ interface NavItem {
 const OWNER_NAV: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/board", label: "Support board" },
+  { href: "/admin/appointments", label: "Booked Appointments" },
   { href: "/admin/review", label: "Review queue", countKey: "review" },
   { href: "/admin/unassigned", label: "Unassigned", countKey: "unassigned" },
   { href: "/admin/team", label: "Team" },

@@ -36,6 +36,17 @@ export const mediaStorageSchema = z.object({
 });
 
 
+export const ghlConnectionSchema = z.object({
+  body: z.object({
+    ghlCompanyId: z.string().min(1, "Company/Location ID is required").max(64).regex(/^[\w-]+$/, "Invalid Company/Location ID format"),
+    ghlApiKey: z.string().min(10, "GHL Private Integration key is required").max(512),
+    // Used as the locationId for calendar/appointment lookups (GHL's
+    // Calendars API requires one). Reuses the same slot media storage
+    // could later use — most agencies only run one primary location.
+    ghlLocationId: z.string().min(1, "Location ID is required").max(64).regex(/^[\w-]+$/, "Invalid Location ID format"),
+  }),
+});
+
 export const loginSchema = z.object({
   body: z.object({
     email: z.string().email(),

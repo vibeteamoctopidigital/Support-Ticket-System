@@ -22,6 +22,16 @@ export class AuthController {
     }
   }
 
+  async updateGhlConnection(req: Request, res: Response, next: NextFunction) {
+    try {
+      // NEVER log req.body here — it carries the agency's GHL PIT.
+      const result = await authService.updateGhlConnection(req.user!.agencyId, req.user!.userId, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;

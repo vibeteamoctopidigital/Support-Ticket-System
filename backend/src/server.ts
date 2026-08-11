@@ -15,6 +15,7 @@ import { notificationsRouter } from "./modules/notifications/notifications.route
 import { analyticsRouter } from "./modules/analytics/analytics.routes";
 import { socialRouter } from "./modules/social/social.routes";
 import { auditLogsRouter } from "./modules/audit-logs/audit-logs.routes";
+import { appointmentsRouter } from "./modules/appointments/appointments.routes";
 import { storageService } from "./lib/storage/storage.service";
 
 const logger = pino({ name: "server start" });
@@ -59,6 +60,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/social", socialRouter);
 app.use("/api/audit-logs", auditLogsRouter);
+app.use("/api/appointments", appointmentsRouter);
 
 // Error handlers
 const [notFoundHandler, errorLogger] = errorHandler();

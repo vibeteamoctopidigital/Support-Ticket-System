@@ -19,4 +19,10 @@ export const config = {
     clientRefreshTokenKey: "client_refresh_token",
     sessionKey: "session",
   },
+  ghl: {
+    // The Booked Appointments page (/admin/appointments) fetches booked
+    // events for this calendar from the backend, which calls GHL's Calendars
+    // API using the agency's connected GHL account.
+    calendarId: "1xWshhlS9JuOcpuOqvDp",
+  },
 } as const

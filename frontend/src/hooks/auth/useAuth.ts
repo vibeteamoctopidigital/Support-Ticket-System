@@ -38,10 +38,16 @@ export function useAuth() {
   // admin area and the client area each resolve THEIR OWN user, even though
   // both sessions live in the same browser.
   const [area, setArea] = useState<SessionRole | null>(null)
+  // Until this flips true, we simply haven't looked at localStorage yet —
+  // NOT the same as "no token". Treating that gap as loading (not
+  // unauthenticated) stops AuthGuard from redirecting to /login on every
+  // reload before the real token has even been read.
+  const [hasCheckedStorage, setHasCheckedStorage] = useState(false)
 
   useEffect(() => {
     setToken(tokenStorage.getAccessToken())
     setArea(getActiveRole())
+    setHasCheckedStorage(true)
   }, [])
 
   const {
@@ -64,7 +70,7 @@ export function useAuth() {
   // that stored token is being re-validated via /auth/me, the session counts
   // as loading — otherwise AuthGuard sees "not authenticated" for a moment
   // and wrongly bounces a logged-in user to /login on every refresh.
-  const isRestoringSession = !!token && !user && mePending && !meError
+  const isRestoringSession = !hasCheckedStorage || (!!token && !user && mePending && !meError)
 
   useEffect(() => {
     if (meError) {

@@ -53,6 +53,14 @@ export const AuthService = {
     return response.data.data
   },
 
+  async updateGhlConnection(params: { ghlCompanyId: string; ghlApiKey: string; ghlLocationId: string }) {
+    const response = await axiosInstance.put<{ success: boolean; data: { ghlCompanyId: string } }>(
+      API_ENDPOINTS.AUTH.GHL_CONNECTION,
+      params,
+    )
+    return response.data.data
+  },
+
   async getMe(): Promise<User> {
     const response = await axiosInstance.get<{ success: boolean; data: User }>(
       API_ENDPOINTS.AUTH.ME,
