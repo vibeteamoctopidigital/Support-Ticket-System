@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { ROUTES } from "@/constants"
 import { getActiveRole, tokenStorage, type SessionRole } from "@/lib/token-storage"
@@ -29,11 +29,20 @@ export function useAuth() {
   const router = useRouter()
   const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
 
-  const token = typeof window !== "undefined" ? tokenStorage.getAccessToken() : undefined
+  // Read localStorage only after mount — reading it during render would make
+  // the client's first pass diverge from the server's (which never has a
+  // token), causing a hydration mismatch. Both start undefined/null and
+  // resolve to the real value one tick later via a normal state update.
+  const [token, setToken] = useState<string | undefined>(undefined)
   // Which session bucket this page area uses — part of the query key so the
   // admin area and the client area each resolve THEIR OWN user, even though
   // both sessions live in the same browser.
-  const area = typeof window !== "undefined" ? getActiveRole() : null
+  const [area, setArea] = useState<SessionRole | null>(null)
+
+  useEffect(() => {
+    setToken(tokenStorage.getAccessToken())
+    setArea(getActiveRole())
+  }, [])
 
   const {
     data: me,
