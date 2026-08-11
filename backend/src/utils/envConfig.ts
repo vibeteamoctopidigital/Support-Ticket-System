@@ -71,8 +71,12 @@ const envSchema = z.object({
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
+  const badKeys = Object.keys(parsedEnv.error.flatten().fieldErrors).join(", ");
   console.error("Invalid environment variables:", parsedEnv.error.format());
-  throw new Error("Invalid environment variables");
+  // Keep the variable names in the thrown message itself — on Vercel a cold-start
+  // throw surfaces as a generic FUNCTION_INVOCATION_FAILED, and naming the missing
+  // vars here means the logs identify the fix instead of just "invalid config".
+  throw new Error(`Invalid environment variables (missing or invalid: ${badKeys})`);
 }
 
 const data = parsedEnv.data;
