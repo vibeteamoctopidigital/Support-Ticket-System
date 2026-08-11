@@ -110,6 +110,14 @@ export function useAuth() {
     [dispatch, router],
   )
 
+  /** No-login mode: silently issues a real session for the default owner. */
+  const autoLogin = useCallback(async () => {
+    const data = await AuthService.autoLogin()
+    tokenStorage.setTokensForRole(roleToSession(data.user.role), data.accessToken, data.refreshToken)
+    dispatch(setUser(data.user))
+    return data.user
+  }, [dispatch])
+
   /** First-time agency owner connect (email + password + Company ID + GHL key + media location). */
   const connect = useCallback(
     async (params: {
@@ -209,6 +217,7 @@ export function useAuth() {
     isTeamMember,
     isSubAccount,
     login,
+    autoLogin,
     connect,
     adoptSession,
     switchRole,

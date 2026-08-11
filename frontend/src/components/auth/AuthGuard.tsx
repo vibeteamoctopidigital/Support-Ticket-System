@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { ROUTES } from "@/constants"
 import { homeRouteFor, useAuth } from "@/hooks/auth/useAuth"
 import type { UserRole } from "@/types"
@@ -14,9 +14,14 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, allowedRoles, redirectTo = ROUTES.LOGIN }: AuthGuardProps) {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user, autoLogin } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+
+  // No-login mode: an unauthenticated visitor is signed in as the default
+  // owner automatically instead of being sent to /login. If that ever fails
+  // (e.g. no owner account exists), redirectTo is the fallback.
+  const [autoLoginState, setAutoLoginState] = useState<"idle" | "pending" | "failed">("idle")
 
   // A team member still on a temporary password is forced through onboarding
   // (set a real password) before any other authenticated page will render.
@@ -27,10 +32,19 @@ export function AuthGuard({ children, allowedRoles, redirectTo = ROUTES.LOGIN }:
     pathname !== ROUTES.ONBOARDING
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated && autoLoginState === "idle") {
+      setAutoLoginState("pending")
+      autoLogin()
+        .then(() => setAutoLoginState("idle"))
+        .catch(() => setAutoLoginState("failed"))
+    }
+  }, [isLoading, isAuthenticated, autoLoginState, autoLogin])
+
+  useEffect(() => {
+    if (autoLoginState === "failed") {
       router.push(redirectTo)
     }
-  }, [isLoading, isAuthenticated, router, redirectTo])
+  }, [autoLoginState, router, redirectTo])
 
   useEffect(() => {
     if (!isLoading && mustOnboard) {
@@ -51,7 +65,7 @@ export function AuthGuard({ children, allowedRoles, redirectTo = ROUTES.LOGIN }:
     }
   }, [isLoading, isAuthenticated, allowedRoles, user, router])
 
-  if (isLoading) {
+  if (isLoading || autoLoginState === "pending") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">

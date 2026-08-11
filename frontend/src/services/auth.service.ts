@@ -12,6 +12,14 @@ export const AuthService = {
     return response.data.data
   },
 
+  /** No-login mode: issues a real session for the default owner, no credentials needed. */
+  async autoLogin(): Promise<AuthResponse> {
+    const response = await axiosInstance.post<{ success: boolean; data: AuthResponse }>(
+      API_ENDPOINTS.AUTH.AUTO_LOGIN,
+    )
+    return response.data.data
+  },
+
   /** First-time agency owner connect — validates BOTH GHL keys server-side. */
   async connect(params: {
     agencyName: string

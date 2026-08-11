@@ -14,6 +14,8 @@ const router = Router();
 // application/json without a CORS preflight, which our CORS policy rejects).
 router.post("/connect", authRateLimiter, requireJsonContent, validateRequest(connectSchema), authController.connect);
 router.post("/login", authRateLimiter, requireJsonContent, validateRequest(loginSchema), authController.login);
+// No-login mode: issues a real session for the default owner, no credentials needed.
+router.post("/auto-login", authRateLimiter, authController.autoLogin);
 router.post("/refresh", authRateLimiter, requireJsonContent, authController.refresh);
 
 // Owner sets/updates the media-storage sub-account credentials (validated live).

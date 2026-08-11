@@ -13,6 +13,15 @@ export class AuthController {
     }
   }
 
+  async autoLogin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.autoLogin();
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateMediaStorage(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await authService.updateMediaStorage(req.user!.agencyId, req.user!.userId, req.body);

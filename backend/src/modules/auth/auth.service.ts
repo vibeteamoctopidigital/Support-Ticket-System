@@ -354,6 +354,42 @@ export class AuthService {
     };
   }
 
+  /**
+   * No-login mode: issues a real session for the earliest-created agency
+   * owner with no credentials required, so the frontend can skip the login
+   * screen entirely and land straight in the admin dashboard. Deliberately
+   * requested to run in production too — this endpoint is intentionally
+   * public and needs no thought beyond "who is the default owner".
+   */
+  async autoLogin() {
+    const user = await prisma.user.findFirst({
+      where: { role: "AGENCY_OWNER", isDeleted: false },
+      orderBy: { createdAt: "asc" },
+      include: { agency: true },
+    });
+    if (!user) {
+      throw unauthorized("No agency owner account exists to auto-login as.", "NO_OWNER_ACCOUNT");
+    }
+
+    const jwtPayload: JwtPayload = { userId: user.id, role: user.role, agencyId: user.agencyId };
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        initials: user.initials,
+        agencyId: user.agencyId,
+        agencyName: user.agency.name,
+        tempPassword: user.tempPassword,
+        isAvailable: user.isAvailable,
+      },
+      accessToken: signAccessToken(jwtPayload),
+      refreshToken: signRefreshToken(jwtPayload),
+    };
+  }
+
   async refreshToken(token: string) {
     const { verifyRefreshToken } = await import("../../utils/jwt");
     // An expired/garbage refresh token is a routine 401, never a 500 — the

@@ -39,6 +39,7 @@ export const ROUTES = {
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/auth/login",
+    AUTO_LOGIN: "/auth/auto-login",
     CONNECT: "/auth/connect",
     REFRESH: "/auth/refresh",
     CHANGE_PASSWORD: "/auth/change-password",
