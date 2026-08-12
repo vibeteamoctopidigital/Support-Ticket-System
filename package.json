@@ -1,0 +1,14 @@
+{
+  "name": "support-ticket-system",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.12.0",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "pnpm --filter ./backend run build",
+    "start": "pnpm --filter ./backend start",
+    "dev": "pnpm --filter ./backend run dev"
+  }
+}
