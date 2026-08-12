@@ -61,11 +61,14 @@ export class PortalService {
       return { view: "agency" };
     }
 
-    const agency = await prisma.agency.findFirst({
-      where: { ghlMediaLocationId: locationId },
-      select: { id: true },
-    });
-    return { view: agency ? "agency" : "sub_account" };
+    try {
+      const agency = await this.connectedAgency();
+      if (agency.ghlMediaLocationId === locationId) return { view: "agency" };
+    } catch {
+      // No connected agency — nothing to be the "owner view" of.
+    }
+
+    return { view: "sub_account" };
   }
 
   async enter(locationId: string): Promise<PortalResult> {

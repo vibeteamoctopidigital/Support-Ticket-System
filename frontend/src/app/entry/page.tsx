@@ -8,9 +8,19 @@ import { PortalService } from "@/services/portal.service"
 
 /**
  * Single Custom Menu Link entry point, installed at BOTH the agency level
- * and inside each sub-account: /entry?{{location.id}} — deliberately no
- * key=, so GHL substitutes it as a bare, keyless query string (or nothing at
- * all when opened at the agency level, which has no location context).
+ * and inside each sub-account.
+ *
+ * Recommended GHL URL (documented substitution form, works everywhere):
+ *   /entry?location_id={{location.id}}
+ *
+ * Also tolerated for backward compatibility — GHL substituting it as a bare,
+ * keyless query string:
+ *   /entry?{{location.id}}
+ *
+ * Either way, at the agency level GHL does not substitute the variable (it
+ * only resolves on the Location sidebar), so the literal placeholder — or an
+ * empty query — is treated as the agency view and the owner lands on the
+ * admin dashboard.
  */
 
 function extractLocationId(searchParams: URLSearchParams): string | null {
