@@ -1,6 +1,7 @@
 import { ghlClient } from "../../lib/ghl/ghl.client";
 import { AppError } from "../../utils/appError";
 import { decryptSecret } from "../../utils/crypto";
+import { env } from "../../utils/envConfig";
 import { signAccessToken, signRefreshToken, type JwtPayload } from "../../utils/jwt";
 import { prisma } from "../../utils/prisma";
 import { StatusCodes } from "http-status-codes";
@@ -44,15 +45,25 @@ export class PortalService {
    * Entry-point routing for a single Custom Menu Link installed at BOTH the
    * agency level and inside each sub-account (/entry?{{location.id}}, no
    * key= — GHL substitutes it as a bare query string). Distinguishes the two
-   * by comparing against the connected agency's own designated location — a
-   * location.id GHL doesn't populate at all (agency-level view) is also
-   * treated as the agency view.
+   * by comparing the given location against the connected agency's own
+   * designated location: a location.id GHL doesn't populate at all
+   * (agency-level view) is also treated as the agency view.
+   *
+   * The agency's own location id is taken from GHL_VERIFY_LOCATION_ID
+   * (the authoritative value in the environment), falling back to the
+   * ghlMediaLocationId stored on the connected agency row for older setups
+   * that predate that variable.
    */
   async resolveEntry(locationId: string | null): Promise<{ view: "agency" | "sub_account" }> {
     if (!locationId) return { view: "agency" };
 
+    if (env.GHL_VERIFY_LOCATION_ID && env.GHL_VERIFY_LOCATION_ID === locationId) {
+      return { view: "agency" };
+    }
+
     const agency = await prisma.agency.findFirst({
       where: { ghlMediaLocationId: locationId },
+      select: { id: true },
     });
     return { view: agency ? "agency" : "sub_account" };
   }

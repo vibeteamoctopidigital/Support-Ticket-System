@@ -30,8 +30,13 @@ const envSchema = z.object({
   GHL_API_BASE_URL: z.string().url().default("https://services.leadconnectorhq.com"),
   GHL_API_VERSION: z.string().default("2021-07-28"),
 
-  // Inputs for the one-time live verification script (ghlscripts/verify-ghl.ts).
-  // Never used by the app itself — safe to leave unset in production.
+  // GoHighLevel agency context.
+  // GHL_VERIFY_LOCATION_ID is the AGENCY's own location id: it drives the
+  // /api/portal/resolve-entry routing that decides whether /entry opens the
+  // admin dashboard (agency view) or the sub-account portal (any other
+  // location). Set it in production. GHL_VERIFY_API_KEY is used by the
+  // one-time live verification script (ghlscripts/verify-ghl.ts) and is not
+  // read by the app itself.
   GHL_VERIFY_API_KEY: z.string().optional(),
   GHL_VERIFY_LOCATION_ID: z.string().optional(),
 
