@@ -1,12 +1,13 @@
 "use client"
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertTriangle, CalendarClock } from "lucide-react"
+import { AlertTriangle, CalendarClock, Plus } from "lucide-react"
 import { useState } from "react"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layouts/AppShell"
 import { AppointmentCard } from "@/components/appointments/AppointmentCard"
 import { AppointmentDetailModal } from "@/components/appointments/AppointmentDetailModal"
+import { BookingWidgetModal } from "@/components/appointments/BookingWidgetModal"
 import { GhlConnectionModal } from "@/components/settings/GhlConnectionModal"
 import { Button } from "@/components/ui/button"
 import { config } from "@/config"
@@ -48,6 +49,7 @@ function AppointmentsPage() {
   })
   const [openId, setOpenId] = useState<string | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
+  const [bookingOpen, setBookingOpen] = useState(false)
   const openAppointment = appointments?.find((a) => a.id === openId) ?? null
 
   const errorCode = (error as any)?.response?.data?.error?.code as string | undefined
@@ -57,7 +59,17 @@ function AppointmentsPage() {
   const refetch = () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.APPOINTMENTS(CALENDAR_ID) })
 
   return (
-    <AppShell title="Booked Appointments" subtitle="Live bookings from your GoHighLevel calendar.">
+    <AppShell
+      title="Booked Appointments"
+      subtitle="Live bookings from your GoHighLevel calendar."
+      actions={
+        CALENDAR_ID && !notConnected ? (
+          <Button onClick={() => setBookingOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
+            <Plus className="w-4 h-4 mr-1.5" /> New booking
+          </Button>
+        ) : undefined
+      }
+    >
       {!CALENDAR_ID ? (
         <EmptyState
           title="Calendar not connected yet"
@@ -92,6 +104,16 @@ function AppointmentsPage() {
 
       {openAppointment && <AppointmentDetailModal appointment={openAppointment} onClose={() => setOpenId(null)} />}
       {connectOpen && <GhlConnectionModal onClose={() => setConnectOpen(false)} onConnected={refetch} />}
+      {bookingOpen && (
+        <BookingWidgetModal
+          calendarId={CALENDAR_ID}
+          onClose={() => {
+            setBookingOpen(false)
+            // The new booking (if any) needs a moment to land in GHL before it'd show up here anyway.
+            refetch()
+          }}
+        />
+      )}
     </AppShell>
   )
 }

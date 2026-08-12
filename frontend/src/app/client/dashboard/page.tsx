@@ -2,10 +2,10 @@
 
 import { formatDistanceToNow } from "date-fns"
 import { Loader2, Plus, TicketCheck } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layouts/AppShell"
-import { NewTicketModal } from "@/components/tickets/NewTicketModal"
 import { TicketDetailModal } from "@/components/tickets/TicketDetailModal"
 import { PriorityBadge, StageBadge } from "@/components/tickets/ticket-bits"
 import { Button } from "@/components/ui/button"
@@ -15,14 +15,15 @@ import { useMySubmittedTickets } from "@/hooks/query/useTickets"
 function ClientDashboard() {
   const { data: tickets, isLoading } = useMySubmittedTickets()
   const [openId, setOpenId] = useState<string | null>(null)
-  const [newOpen, setNewOpen] = useState(false)
+  const router = useRouter()
+  const openNewTicket = () => router.push(ROUTES.CLIENT_NEW_TICKET)
 
   return (
     <AppShell
       title="My tickets"
       subtitle="Track every ticket you've submitted and its current stage."
       actions={
-        <Button onClick={() => setNewOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
+        <Button onClick={openNewTicket} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
           <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
         </Button>
       }
@@ -34,7 +35,7 @@ function ClientDashboard() {
           <TicketCheck className="w-8 h-8 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-600 font-medium text-sm">No tickets yet</p>
           <p className="text-gray-400 text-[12.5px] mt-1">Submit your first ticket and we'll route it to the right person.</p>
-          <Button onClick={() => setNewOpen(true)} className="mt-5 rounded-xl bg-black hover:bg-gray-800 text-white">
+          <Button onClick={openNewTicket} className="mt-5 rounded-xl bg-black hover:bg-gray-800 text-white">
             <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
           </Button>
         </div>
@@ -66,7 +67,6 @@ function ClientDashboard() {
         </div>
       )}
       {openId && <TicketDetailModal ticketId={openId} onClose={() => setOpenId(null)} />}
-      {newOpen && <NewTicketModal onClose={() => setNewOpen(false)} />}
     </AppShell>
   )
 }

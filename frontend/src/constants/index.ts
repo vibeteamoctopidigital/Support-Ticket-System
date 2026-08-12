@@ -24,6 +24,7 @@ export const ROUTES = {
   TEAM_DASHBOARD: "/team/dashboard",
   TEAM_BOARD: "/team/board",
   CLIENT_DASHBOARD: "/client/dashboard",
+  CLIENT_NEW_TICKET: "/client/new-ticket",
   DASHBOARD: "/dashboard",
   BOARD: "/dashboard/board",
   UNASSIGNED: "/dashboard/unassigned",

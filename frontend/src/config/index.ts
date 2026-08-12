@@ -23,6 +23,6 @@ export const config = {
     // The Booked Appointments page (/admin/appointments) fetches booked
     // events for this calendar from the backend, which calls GHL's Calendars
     // API using the agency's connected GHL account.
-    calendarId: "1xWshhlS9JuOcpuOqvDp",
+    calendarId: "aRoL8hMa0ngOYPDqI5ZJ",
   },
 } as const
