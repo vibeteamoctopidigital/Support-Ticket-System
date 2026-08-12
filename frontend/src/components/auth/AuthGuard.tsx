@@ -19,8 +19,12 @@ export function AuthGuard({ children, allowedRoles, redirectTo = ROUTES.LOGIN }:
   const pathname = usePathname()
 
   // No-login mode: an unauthenticated visitor is signed in as the default
-  // owner automatically instead of being sent to /login. If that ever fails
-  // (e.g. no owner account exists), redirectTo is the fallback.
+  // owner automatically instead of being sent to /login. This must NOT apply
+  // to areas with a custom redirectTo (e.g. /client's SUB_ACCOUNT pages send
+  // to /portal to re-verify access) — auto-logging those in as the owner
+  // would silently swap a client's session for the agency owner's and dump
+  // them on the admin dashboard, breaking the portal flow entirely.
+  const autoLoginEligible = redirectTo === ROUTES.LOGIN
   const [autoLoginState, setAutoLoginState] = useState<"idle" | "pending" | "failed">("idle")
 
   // A team member still on a temporary password is forced through onboarding
@@ -32,19 +36,19 @@ export function AuthGuard({ children, allowedRoles, redirectTo = ROUTES.LOGIN }:
     pathname !== ROUTES.ONBOARDING
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && autoLoginState === "idle") {
+    if (!isLoading && !isAuthenticated && autoLoginEligible && autoLoginState === "idle") {
       setAutoLoginState("pending")
       autoLogin()
         .then(() => setAutoLoginState("idle"))
         .catch(() => setAutoLoginState("failed"))
     }
-  }, [isLoading, isAuthenticated, autoLoginState, autoLogin])
+  }, [isLoading, isAuthenticated, autoLoginEligible, autoLoginState, autoLogin])
 
   useEffect(() => {
-    if (autoLoginState === "failed") {
+    if (!isLoading && !isAuthenticated && (!autoLoginEligible || autoLoginState === "failed")) {
       router.push(redirectTo)
     }
-  }, [autoLoginState, router, redirectTo])
+  }, [isLoading, isAuthenticated, autoLoginEligible, autoLoginState, router, redirectTo])
 
   useEffect(() => {
     if (!isLoading && mustOnboard) {

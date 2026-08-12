@@ -40,6 +40,23 @@ export class PortalService {
     return agency;
   }
 
+  /**
+   * Entry-point routing for a single Custom Menu Link installed at BOTH the
+   * agency level and inside each sub-account (/entry?{{location.id}}, no
+   * key= — GHL substitutes it as a bare query string). Distinguishes the two
+   * by comparing against the connected agency's own designated location — a
+   * location.id GHL doesn't populate at all (agency-level view) is also
+   * treated as the agency view.
+   */
+  async resolveEntry(locationId: string | null): Promise<{ view: "agency" | "sub_account" }> {
+    if (!locationId) return { view: "agency" };
+
+    const agency = await prisma.agency.findFirst({
+      where: { ghlMediaLocationId: locationId },
+    });
+    return { view: agency ? "agency" : "sub_account" };
+  }
+
   async enter(locationId: string): Promise<PortalResult> {
     // The same database can hold rows for this location under more than one
     // agency row (e.g. a stale demo/dev agency alongside the real one). A

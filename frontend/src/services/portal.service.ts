@@ -17,4 +17,12 @@ export const PortalService = {
     )
     return response.data.data
   },
+
+  async resolveEntry(locationId: string | null): Promise<{ view: "agency" | "sub_account" }> {
+    const response = await axiosInstance.get<{ success: boolean; data: { view: "agency" | "sub_account" } }>(
+      API_ENDPOINTS.PORTAL.RESOLVE_ENTRY,
+      { params: locationId ? { locationId } : undefined },
+    )
+    return response.data.data
+  },
 }

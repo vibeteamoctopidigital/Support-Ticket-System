@@ -51,6 +51,7 @@ export const API_ENDPOINTS = {
   },
   PORTAL: {
     ENTER: "/portal/enter",
+    RESOLVE_ENTRY: "/portal/resolve-entry",
   },
   SUB_ACCOUNTS: {
     LIST: "/sub-accounts",
