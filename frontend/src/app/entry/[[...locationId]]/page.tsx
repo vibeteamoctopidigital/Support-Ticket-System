@@ -1,7 +1,7 @@
 "use client"
 
 import { Loader2, XCircle } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useRef, useState } from "react"
 import { ROUTES } from "@/constants"
 import { PortalService } from "@/services/portal.service"
@@ -10,20 +10,26 @@ import { PortalService } from "@/services/portal.service"
  * Single Custom Menu Link entry point, installed at BOTH the agency level
  * and inside each sub-account.
  *
- * Recommended GHL URL (documented substitution form, works everywhere):
- *   /entry?location_id={{location.id}}
+ * GHL's documented custom-menu-link form puts the location in the PATH:
+ *   /entry/{{location.id}}
+ * This is the recommended form — GHL's URL field can silently fail to save
+ * a query string containing the template variable.
  *
- * Also tolerated for backward compatibility — GHL substituting it as a bare,
- * keyless query string:
+ * Query-string forms are also tolerated for backward compatibility:
+ *   /entry?location_id={{location.id}}
  *   /entry?{{location.id}}
  *
- * Either way, at the agency level GHL does not substitute the variable (it
- * only resolves on the Location sidebar), so the literal placeholder — or an
- * empty query — is treated as the agency view and the owner lands on the
- * admin dashboard.
+ * At the agency level GHL does not substitute the variable (it only resolves
+ * on the Location sidebar), so a literal placeholder — or no location at all
+ * — is treated as the agency view and the owner lands on the admin dashboard.
  */
 
-function extractLocationId(searchParams: URLSearchParams): string | null {
+function extractLocationId(searchParams: URLSearchParams, pathSegments: string[] | undefined): string | null {
+  const pathValue = pathSegments?.[0]?.trim()
+  if (pathValue && !/^\{\{.*\}\}$/.test(pathValue) && pathValue !== "undefined" && pathValue !== "null") {
+    return pathValue
+  }
+
   const raw = searchParams.toString()
   if (!raw) return null
   const value = (
@@ -40,6 +46,7 @@ type ScreenState = "resolving" | "error"
 
 function EntryScreen() {
   const searchParams = useSearchParams()
+  const params = useParams<{ locationId?: string | string[] }>()
   const router = useRouter()
   const [state, setState] = useState<ScreenState>("resolving")
   const resolved = useRef(false)
@@ -48,7 +55,8 @@ function EntryScreen() {
     if (resolved.current) return
     resolved.current = true
 
-    const locationId = extractLocationId(searchParams)
+    const pathSegments = Array.isArray(params.locationId) ? params.locationId : params.locationId ? [params.locationId] : undefined
+    const locationId = extractLocationId(searchParams, pathSegments)
 
     PortalService.resolveEntry(locationId)
       .then(({ view }) => {
@@ -59,7 +67,7 @@ function EntryScreen() {
         }
       })
       .catch(() => setState("error"))
-  }, [searchParams, router])
+  }, [searchParams, params, router])
 
   if (state === "error") {
     return (
