@@ -47,6 +47,8 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: "/auth/change-password",
     FIRST_LOGIN_PASSWORD: "/auth/first-login-password",
     MEDIA_STORAGE: "/auth/media-storage",
+    GHL_CONNECTION: "/auth/ghl-connection",
+    BOOKING_CALENDAR: "/auth/booking-calendar",
     IMPERSONATE: "/auth/impersonate",
     ME: "/auth/me",
   },
@@ -123,5 +125,6 @@ export const QUERY_KEYS = {
   UNREAD_COUNT: ["notifications", "unread-count"] as const,
   ANALYTICS: ["analytics"] as const,
   AUDIT_LOGS: ["audit-logs"] as const,
-  APPOINTMENTS: ["appointments"] as const,
+  APPOINTMENTS: (calendarId: string) => ["appointments", calendarId] as const,
+  BOOKING_CALENDAR: ["auth", "booking-calendar"] as const,
 } as const

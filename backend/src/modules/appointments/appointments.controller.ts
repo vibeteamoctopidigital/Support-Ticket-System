@@ -4,7 +4,8 @@ import { appointmentsService } from "./appointments.service";
 export class AppointmentsController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const data = await appointmentsService.listBookedAppointments(req.user!.agencyId);
+      const calendarId = String(req.query.calendarId ?? "");
+      const data = await appointmentsService.listBookedAppointments(req.user!.agencyId, calendarId);
       res.json({ success: true, data });
     } catch (error) {
       next(error);

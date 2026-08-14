@@ -16,7 +16,6 @@ import { analyticsRouter } from "./modules/analytics/analytics.routes";
 import { socialRouter } from "./modules/social/social.routes";
 import { auditLogsRouter } from "./modules/audit-logs/audit-logs.routes";
 import { appointmentsRouter } from "./modules/appointments/appointments.routes";
-import { webhooksRouter } from "./modules/webhooks/webhooks.routes";
 import { storageService } from "./lib/storage/storage.service";
 
 const logger = pino({ name: "server start" });
@@ -62,7 +61,6 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/social", socialRouter);
 app.use("/api/audit-logs", auditLogsRouter);
 app.use("/api/appointments", appointmentsRouter);
-app.use("/api/webhooks", webhooksRouter);
 
 // Error handlers
 const [notFoundHandler, errorLogger] = errorHandler();

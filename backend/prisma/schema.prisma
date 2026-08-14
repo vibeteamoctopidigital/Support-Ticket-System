@@ -76,7 +76,6 @@ model Agency {
   auditLogs     AuditLog[]
   stageConfigs  StageConfig[]
   socialOrders  SocialOrder[]
-  bookedAppointments BookedAppointment[]
 }
 
 model SubAccount {
@@ -347,31 +346,6 @@ model SocialOrderMessage {
   sender User        @relation("SocialOrderChats", fields: [senderId], references: [id])
 
   @@index([orderId, createdAt])
-}
-
-// Populated entirely by an inbound GHL webhook (see webhooks module) — no
-// polling, no per-calendar credentials. GHL pushes each booking to us the
-// moment it happens; ghlEventId dedupes retried/duplicate deliveries.
-model BookedAppointment {
-  id            String   @id @default(cuid())
-  agencyId      String
-  ghlEventId    String
-  ghlCalendarId String?
-  contactName   String
-  contactEmail  String?
-  contactPhone  String?
-  title         String
-  startTime     DateTime
-  endTime       DateTime
-  status        String   @default("confirmed")
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  agency Agency @relation(fields: [agencyId], references: [id])
-
-  @@unique([agencyId, ghlEventId])
-  @@index([agencyId, startTime])
 }
 
 model StageConfig {

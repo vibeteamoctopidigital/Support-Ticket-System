@@ -22,14 +22,3 @@ export const portalRateLimiter = rateLimit({
   message: { success: false, error: { code: "RATE_LIMITED", message: "Too many attempts — try again in a few minutes." } },
   validate: { xForwardedForHeader: false, trustProxy: false },
 });
-
-// Inbound GHL webhooks — generous since a busy agency can burst many bookings
-// at once, but still bounded against abuse of the public endpoint.
-export const webhookRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: { code: "RATE_LIMITED", message: "Too many requests." } },
-  validate: { xForwardedForHeader: false, trustProxy: false },
-});
