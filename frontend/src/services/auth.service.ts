@@ -61,36 +61,6 @@ export const AuthService = {
     return response.data.data
   },
 
-  async updateGhlConnection(params: { ghlCompanyId: string; ghlApiKey: string; ghlLocationId: string }) {
-    const response = await axiosInstance.put<{ success: boolean; data: { ghlCompanyId: string } }>(
-      API_ENDPOINTS.AUTH.GHL_CONNECTION,
-      params,
-    )
-    return response.data.data
-  },
-
-  /** Owner sets/updates the booking-calendar credential (validated live against GHL). */
-  async updateBookingCalendar(params: {
-    ghlBookingCalendarId: string
-    ghlBookingCalendarLocationId: string
-    ghlBookingCalendarApiKey: string
-  }) {
-    const response = await axiosInstance.put<{ success: boolean; data: { ghlBookingCalendarId: string } }>(
-      API_ENDPOINTS.AUTH.BOOKING_CALENDAR,
-      params,
-    )
-    return response.data.data
-  },
-
-  /** Current booking-calendar connection status — never exposes the key. */
-  async getBookingCalendar() {
-    const response = await axiosInstance.get<{
-      success: boolean
-      data: { configured: boolean; calendarId: string | null; locationId: string | null }
-    }>(API_ENDPOINTS.AUTH.BOOKING_CALENDAR)
-    return response.data.data
-  },
-
   async getMe(): Promise<User> {
     const response = await axiosInstance.get<{ success: boolean; data: User }>(
       API_ENDPOINTS.AUTH.ME,

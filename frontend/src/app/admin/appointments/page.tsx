@@ -1,122 +1,76 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertTriangle, CalendarClock, Plus } from "lucide-react"
+import { useQuery } from "@tanstack/react-query"
+import { CalendarClock, Check, Copy } from "lucide-react"
 import { useState } from "react"
 import { AuthGuard } from "@/components/auth/AuthGuard"
 import { AppShell } from "@/components/layouts/AppShell"
 import { AppointmentCard } from "@/components/appointments/AppointmentCard"
 import { AppointmentDetailModal } from "@/components/appointments/AppointmentDetailModal"
-import { BookingWidgetModal } from "@/components/appointments/BookingWidgetModal"
-import { BookingCalendarModal } from "@/components/settings/BookingCalendarModal"
-import { GhlConnectionModal } from "@/components/settings/GhlConnectionModal"
-import { Button } from "@/components/ui/button"
 import { QUERY_KEYS } from "@/constants"
+import { useAuth } from "@/hooks/auth/useAuth"
 import { AppointmentService } from "@/services/appointment.service"
-import { AuthService } from "@/services/auth.service"
 
-function EmptyState({
-  icon: Icon = CalendarClock,
-  title,
-  subtitle,
-  action,
-}: {
-  icon?: typeof CalendarClock
-  title: string
-  subtitle: string
-  action?: React.ReactNode
-}) {
+/** Backend base URL without the trailing /api — the webhook route lives under /api/webhooks. */
+function apiOrigin(): string {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? ""
+  return apiUrl.replace(/\/api\/?$/, "")
+}
+
+function WebhookSetupNotice({ agencyId }: { agencyId: string }) {
+  const [copied, setCopied] = useState(false)
+  const webhookUrl = `${apiOrigin()}/api/webhooks/ghl/appointments/${agencyId}`
+
+  const copy = () => {
+    navigator.clipboard.writeText(webhookUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 py-24 px-6 flex flex-col items-center text-center">
       <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
-        <Icon className="w-7 h-7 text-blue-500" />
+        <CalendarClock className="w-7 h-7 text-blue-500" />
       </div>
-      <h3 className="text-[15px] font-bold text-gray-900">{title}</h3>
-      <p className="text-[13px] text-gray-500 mt-1.5 max-w-sm leading-relaxed">{subtitle}</p>
-      {action && <div className="mt-5">{action}</div>}
+      <h3 className="text-[15px] font-bold text-gray-900">No bookings yet</h3>
+      <p className="text-[13px] text-gray-500 mt-1.5 max-w-md leading-relaxed">
+        Every appointment booked on any of your GoHighLevel calendars shows up here automatically — no calendar ID or
+        API key needed. In GoHighLevel, add a Workflow with an <strong>Appointment Booked</strong> trigger and a{" "}
+        <strong>Webhook</strong> action pointed at this URL:
+      </p>
+      <div className="mt-4 w-full max-w-md flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+        <code className="flex-1 text-[12px] text-gray-700 text-left break-all">{webhookUrl}</code>
+        <button
+          type="button"
+          onClick={copy}
+          className="flex-shrink-0 inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-[12px] font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
     </div>
   )
 }
 
 function AppointmentsPage() {
-  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const { data: appointments, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.APPOINTMENTS,
+    queryFn: () => AppointmentService.list(),
+    enabled: !!user,
+  })
   const [openId, setOpenId] = useState<string | null>(null)
-  const [connectOpen, setConnectOpen] = useState(false)
-  const [calendarOpen, setCalendarOpen] = useState(false)
-  const [bookingOpen, setBookingOpen] = useState(false)
-
-  // The agency's connected booking calendar (from the backend, so it survives
-  // deployments and can differ from any hard-coded calendar in frontend config).
-  const { data: bookingCalendar, isLoading: bcLoading } = useQuery({
-    queryKey: QUERY_KEYS.BOOKING_CALENDAR,
-    queryFn: () => AuthService.getBookingCalendar(),
-    retry: false,
-  })
-  const calendarId = bookingCalendar?.configured ? (bookingCalendar.calendarId ?? null) : null
-
-  const { data: appointments, isLoading, error } = useQuery({
-    queryKey: QUERY_KEYS.APPOINTMENTS(calendarId ?? ""),
-    queryFn: () => AppointmentService.list(calendarId ?? ""),
-    enabled: !!calendarId,
-    retry: false,
-  })
   const openAppointment = appointments?.find((a) => a.id === openId) ?? null
 
-  const errorCode = (error as any)?.response?.data?.error?.code as string | undefined
-  const errorMessage = (error as any)?.response?.data?.error?.message as string | undefined
-  const notConnected = errorCode === "GHL_NOT_CONNECTED" || errorCode === "GHL_KEY_INVALID"
-  const calendarNotSet = !bookingCalendar?.configured || errorCode === "GHL_CALENDAR_NOT_SET"
-
-  const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BOOKING_CALENDAR })
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.APPOINTMENTS(calendarId ?? "") })
-  }
-
   return (
-    <AppShell
-      title="Booked Appointments"
-      subtitle="Live bookings from your GoHighLevel calendar."
-      actions={
-        calendarId && !notConnected && !calendarNotSet ? (
-          <Button onClick={() => setBookingOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
-            <Plus className="w-4 h-4 mr-1.5" /> New booking
-          </Button>
-        ) : undefined
-      }
-    >
-      {bcLoading ? (
+    <AppShell title="Booked Appointments" subtitle="Live bookings from your GoHighLevel calendars.">
+      {isLoading ? (
         <div className="flex justify-center py-24">
           <div className="w-7 h-7 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
         </div>
-      ) : calendarNotSet ? (
-        <EmptyState
-          title="Booking calendar not connected"
-          subtitle="Connect the GoHighLevel calendar that receives your bookings — every appointment booked on it will then show up below as a card."
-          action={
-            <Button onClick={() => setCalendarOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
-              Connect booking calendar
-            </Button>
-          }
-        />
-      ) : isLoading ? (
-        <div className="flex justify-center py-24">
-          <div className="w-7 h-7 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
-        </div>
-      ) : error ? (
-        <EmptyState
-          icon={notConnected ? CalendarClock : AlertTriangle}
-          title={notConnected ? "GoHighLevel account not connected" : "Couldn't load appointments"}
-          subtitle={errorMessage ?? "Something went wrong talking to GoHighLevel — try again shortly."}
-          action={
-            notConnected ? (
-              <Button onClick={() => setConnectOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
-                Connect GoHighLevel
-              </Button>
-            ) : undefined
-          }
-        />
       ) : !appointments || appointments.length === 0 ? (
-        <EmptyState title="No appointments yet" subtitle="Bookings made through your calendar will appear here." />
+        <WebhookSetupNotice agencyId={user!.agencyId} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {appointments.map((a) => (
@@ -126,18 +80,6 @@ function AppointmentsPage() {
       )}
 
       {openAppointment && <AppointmentDetailModal appointment={openAppointment} onClose={() => setOpenId(null)} />}
-      {calendarOpen && <BookingCalendarModal onClose={() => setCalendarOpen(false)} onConnected={refetch} />}
-      {connectOpen && <GhlConnectionModal onClose={() => setConnectOpen(false)} onConnected={refetch} />}
-      {bookingOpen && (
-        <BookingWidgetModal
-          calendarId={calendarId ?? ""}
-          onClose={() => {
-            setBookingOpen(false)
-            // The new booking (if any) needs a moment to land in GHL before it'd show up here anyway.
-            refetch()
-          }}
-        />
-      )}
     </AppShell>
   )
 }
