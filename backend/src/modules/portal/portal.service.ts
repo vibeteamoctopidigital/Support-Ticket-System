@@ -1,4 +1,4 @@
-import { ghlClient } from "../../lib/ghl/ghl.client";
+import { ghlClient, type GhlLocation } from "../../lib/ghl/ghl.client";
 import { AppError } from "../../utils/appError";
 import { decryptSecret } from "../../utils/crypto";
 import { env } from "../../utils/envConfig";
@@ -91,22 +91,22 @@ export class PortalService {
       return { status: "PENDING", requestedAt: existing.requestedAt, created: false };
     }
 
-    // Unknown location — verify it actually exists under this agency in GHL
-    // before creating anything. Garbage/guessed IDs create no rows.
-    let apiKey: string;
+    // Best-effort GHL lookup to fill in the location's name/email. This is NOT
+    // a gate: the location_id in the URL is a claim (first phase.md §4), and
+    // a location-scoped PIT, a rotated key, or a GHL outage must not silently
+    // drop a legitimate access request. The OWNER's approval — setting the row
+    // ACTIVE — is what actually grants portal access; unverifiable locations
+    // simply enter the queue as a plain pending row for the owner to review.
+    let location: GhlLocation | null = null;
     try {
-      apiKey = decryptSecret(agency.ghlApiKeyEncrypted!);
+      const apiKey = decryptSecret(agency.ghlApiKeyEncrypted!);
+      location = await ghlClient.getLocation(apiKey, locationId);
     } catch {
-      // Stored ciphertext doesn't match the current ENCRYPTION_KEY — an ops
-      // problem, not the visitor's. Surface it clearly instead of a raw 500.
-      throw new AppError(
-        "The agency's stored GHL key cannot be read (encryption key changed?). The agency owner must reconnect.",
-        StatusCodes.SERVICE_UNAVAILABLE,
-        "AGENCY_KEY_UNREADABLE",
-      );
+      // Unreadable/insufficient GHL key or GHL unreachable — fall back to the
+      // raw location id; the request still lands in the owner's approval queue.
     }
-    const location = await ghlClient.getLocation(apiKey, locationId);
-    if (!location) return { status: "UNKNOWN_LOCATION" };
+    const locationName = location?.name || locationId;
+    const contactEmail = location?.email ?? null;
 
     try {
       const created = await prisma.$transaction(async (tx) => {
@@ -114,8 +114,8 @@ export class PortalService {
           data: {
             agencyId: agency.id,
             ghlLocationId: locationId,
-            name: location.name || locationId,
-            contactEmail: location.email ?? null,
+            name: locationName,
+            contactEmail,
             status: "PENDING",
           },
         });
@@ -129,7 +129,7 @@ export class PortalService {
             userId: owner.id,
             type: "SUB_ACCOUNT_REQUEST",
             title: "New sub-account access request",
-            message: `${location.name || locationId} is requesting portal access.`,
+            message: `${locationName} is requesting portal access.`,
           })),
         });
         return subAccount;
