@@ -58,6 +58,13 @@ model Agency {
   // uploaded files in that location's GHL Media Library.
   ghlMediaLocationId   String?
   ghlMediaKeyEncrypted String?
+  // Booking calendar: the calendar whose appointments show on the admin
+  // dashboard. Lives in ONE sub-account; that location's own PIT (scopes:
+  // calendars.readonly + contacts.readonly) must be able to read its events —
+  // agency-level keys often can't, so a dedicated credential is stored here.
+  ghlBookingCalendarId           String?
+  ghlBookingCalendarLocationId   String?
+  ghlBookingCalendarApiKeyEncrypted String?
   connectedAt        DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt

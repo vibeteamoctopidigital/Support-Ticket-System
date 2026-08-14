@@ -8,13 +8,12 @@ import { AppShell } from "@/components/layouts/AppShell"
 import { AppointmentCard } from "@/components/appointments/AppointmentCard"
 import { AppointmentDetailModal } from "@/components/appointments/AppointmentDetailModal"
 import { BookingWidgetModal } from "@/components/appointments/BookingWidgetModal"
+import { BookingCalendarModal } from "@/components/settings/BookingCalendarModal"
 import { GhlConnectionModal } from "@/components/settings/GhlConnectionModal"
 import { Button } from "@/components/ui/button"
-import { config } from "@/config"
 import { QUERY_KEYS } from "@/constants"
 import { AppointmentService } from "@/services/appointment.service"
-
-const CALENDAR_ID = config.ghl.calendarId
+import { AuthService } from "@/services/auth.service"
 
 function EmptyState({
   icon: Icon = CalendarClock,
@@ -41,39 +40,63 @@ function EmptyState({
 
 function AppointmentsPage() {
   const queryClient = useQueryClient()
-  const { data: appointments, isLoading, error } = useQuery({
-    queryKey: QUERY_KEYS.APPOINTMENTS(CALENDAR_ID),
-    queryFn: () => AppointmentService.list(CALENDAR_ID),
-    enabled: !!CALENDAR_ID,
-    retry: false,
-  })
   const [openId, setOpenId] = useState<string | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [bookingOpen, setBookingOpen] = useState(false)
+
+  // The agency's connected booking calendar (from the backend, so it survives
+  // deployments and can differ from any hard-coded calendar in frontend config).
+  const { data: bookingCalendar, isLoading: bcLoading } = useQuery({
+    queryKey: QUERY_KEYS.BOOKING_CALENDAR,
+    queryFn: () => AuthService.getBookingCalendar(),
+    retry: false,
+  })
+  const calendarId = bookingCalendar?.configured ? (bookingCalendar.calendarId ?? null) : null
+
+  const { data: appointments, isLoading, error } = useQuery({
+    queryKey: QUERY_KEYS.APPOINTMENTS(calendarId ?? ""),
+    queryFn: () => AppointmentService.list(calendarId ?? ""),
+    enabled: !!calendarId,
+    retry: false,
+  })
   const openAppointment = appointments?.find((a) => a.id === openId) ?? null
 
   const errorCode = (error as any)?.response?.data?.error?.code as string | undefined
   const errorMessage = (error as any)?.response?.data?.error?.message as string | undefined
   const notConnected = errorCode === "GHL_NOT_CONNECTED" || errorCode === "GHL_KEY_INVALID"
+  const calendarNotSet = !bookingCalendar?.configured || errorCode === "GHL_CALENDAR_NOT_SET"
 
-  const refetch = () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.APPOINTMENTS(CALENDAR_ID) })
+  const refetch = () => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.BOOKING_CALENDAR })
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.APPOINTMENTS(calendarId ?? "") })
+  }
 
   return (
     <AppShell
       title="Booked Appointments"
       subtitle="Live bookings from your GoHighLevel calendar."
       actions={
-        CALENDAR_ID && !notConnected ? (
+        calendarId && !notConnected && !calendarNotSet ? (
           <Button onClick={() => setBookingOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
             <Plus className="w-4 h-4 mr-1.5" /> New booking
           </Button>
         ) : undefined
       }
     >
-      {!CALENDAR_ID ? (
+      {bcLoading ? (
+        <div className="flex justify-center py-24">
+          <div className="w-7 h-7 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+        </div>
+      ) : calendarNotSet ? (
         <EmptyState
-          title="Calendar not connected yet"
-          subtitle="Once a GoHighLevel booking calendar is connected here, every appointment booked through it will show up below as a card."
+          title="Booking calendar not connected"
+          subtitle="Connect the GoHighLevel calendar that receives your bookings — every appointment booked on it will then show up below as a card."
+          action={
+            <Button onClick={() => setCalendarOpen(true)} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
+              Connect booking calendar
+            </Button>
+          }
         />
       ) : isLoading ? (
         <div className="flex justify-center py-24">
@@ -103,10 +126,11 @@ function AppointmentsPage() {
       )}
 
       {openAppointment && <AppointmentDetailModal appointment={openAppointment} onClose={() => setOpenId(null)} />}
+      {calendarOpen && <BookingCalendarModal onClose={() => setCalendarOpen(false)} onConnected={refetch} />}
       {connectOpen && <GhlConnectionModal onClose={() => setConnectOpen(false)} onConnected={refetch} />}
       {bookingOpen && (
         <BookingWidgetModal
-          calendarId={CALENDAR_ID}
+          calendarId={calendarId ?? ""}
           onClose={() => {
             setBookingOpen(false)
             // The new booking (if any) needs a moment to land in GHL before it'd show up here anyway.

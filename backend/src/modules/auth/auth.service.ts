@@ -154,6 +154,68 @@ export class AuthService {
   }
 
   /**
+   * Owner sets/updates the booking-calendar credential — the calendar whose
+   * appointments show on the admin dashboard. Because the calendar lives in
+   * ONE specific sub-account (often different from the media-storage one), a
+   * dedicated location-level PIT is required: agency-level keys typically
+   * cannot read /calendars/events for a foreign location. Validated live
+   * against GHL before anything is saved.
+   */
+  async updateBookingCalendar(
+    agencyId: string,
+    actorId: string,
+    dto: { ghlBookingCalendarId: string; ghlBookingCalendarLocationId: string; ghlBookingCalendarApiKey: string },
+  ) {
+    const validation = await ghlClient.validateCalendarKey(
+      dto.ghlBookingCalendarApiKey,
+      dto.ghlBookingCalendarLocationId,
+      dto.ghlBookingCalendarId,
+    );
+    if (!validation.valid) {
+      throw unauthorized(validation.reason ?? "GHL rejected the booking calendar key.", "GHL_BOOKING_CALENDAR_INVALID");
+    }
+
+    await prisma.agency.update({
+      where: { id: agencyId },
+      data: {
+        ghlBookingCalendarId: dto.ghlBookingCalendarId,
+        ghlBookingCalendarLocationId: dto.ghlBookingCalendarLocationId,
+        ghlBookingCalendarApiKeyEncrypted: encryptSecret(dto.ghlBookingCalendarApiKey),
+      },
+    });
+
+    await logAudit({
+      agencyId,
+      actorId,
+      action: "BOOKING_CALENDAR_UPDATED",
+      entityType: "Agency",
+      entityId: agencyId,
+      details: `Booking calendar set to ${dto.ghlBookingCalendarId} in location ${dto.ghlBookingCalendarLocationId}`,
+    });
+
+    return { ghlBookingCalendarId: dto.ghlBookingCalendarId, ghlBookingCalendarLocationId: dto.ghlBookingCalendarLocationId };
+  }
+
+  /**
+   * Read-only status of the booking-calendar credential so the frontend can
+   * decide between "connect it" and "show bookings". Never exposes the key.
+   */
+  async getBookingCalendarStatus(agencyId: string) {
+    const agency = await prisma.agency.findUnique({
+      where: { id: agencyId },
+      select: { ghlBookingCalendarId: true, ghlBookingCalendarLocationId: true, ghlBookingCalendarApiKeyEncrypted: true },
+    });
+    const configured = Boolean(
+      agency?.ghlBookingCalendarId && agency?.ghlBookingCalendarLocationId && agency?.ghlBookingCalendarApiKeyEncrypted,
+    );
+    return {
+      configured,
+      calendarId: configured ? agency!.ghlBookingCalendarId! : null,
+      locationId: configured ? agency!.ghlBookingCalendarLocationId! : null,
+    };
+  }
+
+  /**
    * Lets an already-signed-up agency owner connect (or reconnect) their GHL
    * account after the fact — /auth/connect only sets this at signup time, but
    * agencies created another way (e.g. seeded) start with no GHL credentials
@@ -476,6 +538,13 @@ export class AuthService {
       // Lets the admin UI show/prompt the media-storage settings state.
       mediaStorageConfigured: Boolean(user.agency.ghlMediaLocationId && user.agency.ghlMediaKeyEncrypted),
       mediaLocationId: user.agency.ghlMediaLocationId,
+      // Lets the admin UI show/prompt the booking-calendar connection state.
+      bookingCalendarConfigured: Boolean(
+        user.agency.ghlBookingCalendarId &&
+          user.agency.ghlBookingCalendarLocationId &&
+          user.agency.ghlBookingCalendarApiKeyEncrypted,
+      ),
+      bookingCalendarId: user.agency.ghlBookingCalendarId,
       locationId: user.locationId,
       skills: user.skills,
       isAvailable: user.isAvailable,

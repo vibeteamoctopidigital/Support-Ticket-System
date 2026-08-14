@@ -370,6 +370,52 @@ export const ghlClient = {
   },
 
   /**
+   * Validates the BOOKING-CALENDAR credential: the calendar's own sub-account
+   * PIT (scopes: calendars.readonly, contacts.readonly) must actually be able
+   * to read that calendar's events. Calls GET /calendars/events with a small
+   * 30-day window and treats any successful response (even an empty list) as
+   * valid. Returns a human-ready reason on failure so the connect form can
+   * show exactly what's wrong.
+   */
+  async validateCalendarKey(
+    apiKey: string,
+    locationId: string,
+    calendarId: string,
+  ): Promise<{ valid: boolean; reason?: string }> {
+    try {
+      const now = Date.now();
+      await ghlGet<{ events?: Record<string, any>[] }>({
+        apiKey,
+        path: "/calendars/events",
+        query: { locationId, calendarId, startTime: now - 30 * 24 * 60 * 60 * 1000, endTime: now },
+      });
+      return { valid: true };
+    } catch (err) {
+      if (err instanceof GhlApiError) {
+        if (err.httpStatus === 401 || err.httpStatus === 403) {
+          return {
+            valid: false,
+            reason:
+              "GHL rejected this key for the calendar. It must be a Private Integration created INSIDE the sub-account that owns the calendar, with the calendars.readonly and contacts.readonly scopes — and the Location ID must be that sub-account's own ID.",
+          };
+        }
+        if (err.httpStatus === 404) {
+          return {
+            valid: false,
+            reason:
+              "GHL couldn't find a calendar at that ID in this sub-account. Double-check the Calendar ID and Location ID (the calendar's own sub-account).",
+          };
+        }
+        if (err.httpStatus === 0) {
+          throw badGateway("Could not reach GoHighLevel to validate the booking calendar. Please try again.");
+        }
+        return { valid: false, reason: `GHL booking calendar validation failed (${err.httpStatus}): ${err.message}` };
+      }
+      throw err;
+    }
+  },
+
+  /**
    * GET /calendars/events — booked events for a calendar within a time window.
    * ASSUMED — pending live confirmation (no agency has connected a real GHL
    * key in this codebase yet, so this has never run against production GHL).

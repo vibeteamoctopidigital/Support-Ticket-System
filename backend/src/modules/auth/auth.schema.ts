@@ -47,6 +47,25 @@ export const ghlConnectionSchema = z.object({
   }),
 });
 
+export const bookingCalendarSchema = z.object({
+  body: z.object({
+    ghlBookingCalendarId: z
+      .string({ required_error: "Calendar ID is required" })
+      .min(1, "Calendar ID is required")
+      .max(128)
+      .regex(/^[\w-]+$/, "Invalid Calendar ID format"),
+    ghlBookingCalendarLocationId: z
+      .string({ required_error: "Location ID is required" })
+      .min(1, "Location ID is required")
+      .max(64)
+      .regex(/^[\w-]+$/, "Invalid Location ID format"),
+    ghlBookingCalendarApiKey: z
+      .string({ required_error: "PIT token is required" })
+      .min(10, "PIT token looks too short")
+      .max(512),
+  }),
+});
+
 export const loginSchema = z.object({
   body: z.object({
     email: z.string().email(),

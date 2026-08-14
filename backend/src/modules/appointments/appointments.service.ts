@@ -24,17 +24,44 @@ const STATUS_MAP: Record<string, BookedAppointment["status"]> = {
   invalid: "cancelled",
 };
 
+/**
+ * The credential used for calendar lookups. The dedicated booking-calendar
+ * setting is preferred when present (it's the calendar's own sub-account PIT,
+ * which can actually read its events). Falls back to the agency key + media
+ * location so pre-existing setups keep working until a calendar is connected.
+ */
 async function ghlCredentials(agencyId: string) {
   const agency = await prisma.agency.findUnique({
     where: { id: agencyId },
-    select: { ghlApiKeyEncrypted: true, ghlMediaLocationId: true },
+    select: {
+      ghlApiKeyEncrypted: true,
+      ghlMediaLocationId: true,
+      ghlBookingCalendarId: true,
+      ghlBookingCalendarLocationId: true,
+      ghlBookingCalendarApiKeyEncrypted: true,
+    },
   });
-  // No location is stored specifically for calendars yet — the media-storage
-  // location is reused as the best-known "this agency's location" until a
-  // dedicated setting exists. Revisit if an agency's calendar lives elsewhere.
+
+  if (agency?.ghlBookingCalendarId && agency?.ghlBookingCalendarLocationId && agency?.ghlBookingCalendarApiKeyEncrypted) {
+    try {
+      return {
+        apiKey: decryptSecret(agency.ghlBookingCalendarApiKeyEncrypted),
+        locationId: agency.ghlBookingCalendarLocationId,
+        calendarId: agency.ghlBookingCalendarId,
+      };
+    } catch {
+      throw badGateway(
+        "The stored booking-calendar key can't be read (encryption key changed?) — reconnect the booking calendar.",
+        "GHL_KEY_UNREADABLE",
+      );
+    }
+  }
+
+  // No dedicated calendar setting — fall back to the legacy path (agency key
+  // + media-storage location + the calendarId the caller passed from config).
   if (!agency?.ghlApiKeyEncrypted || !agency.ghlMediaLocationId) return null;
   try {
-    return { apiKey: decryptSecret(agency.ghlApiKeyEncrypted), locationId: agency.ghlMediaLocationId };
+    return { apiKey: decryptSecret(agency.ghlApiKeyEncrypted), locationId: agency.ghlMediaLocationId, calendarId: null };
   } catch {
     throw badGateway(
       "The stored GHL API key can't be read (encryption key changed?) — reconnect the agency's GHL account.",
@@ -44,15 +71,21 @@ async function ghlCredentials(agencyId: string) {
 }
 
 export const appointmentsService = {
-  /** Booked events for one calendar, defaulting to a 90-day window centered on now. */
-  async listBookedAppointments(agencyId: string, calendarId: string): Promise<BookedAppointment[]> {
-    if (!calendarId) throw conflict("No calendar is configured yet.", "GHL_CALENDAR_NOT_SET");
-
+  /** Booked events for the agency's booking calendar, defaulting to a 90-day window centered on now. */
+  async listBookedAppointments(agencyId: string, requestedCalendarId: string): Promise<BookedAppointment[]> {
     const credentials = await ghlCredentials(agencyId);
     if (!credentials) {
       throw conflict(
         "This agency hasn't connected a GoHighLevel account yet — connect it to see live bookings here.",
         "GHL_NOT_CONNECTED",
+      );
+    }
+
+    const calendarId = credentials.calendarId || requestedCalendarId;
+    if (!calendarId) {
+      throw conflict(
+        "No booking calendar is connected yet — connect one on the Booked Appointments page to see live bookings.",
+        "GHL_CALENDAR_NOT_SET",
       );
     }
 

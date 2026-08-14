@@ -47,6 +47,18 @@ export const ghlConnectionSchema = z.object({
     .regex(/^[\w-]+$/, "Only letters, numbers, dashes and underscores"),
 })
 
+export const bookingCalendarSchema = z.object({
+  ghlBookingCalendarId: z
+    .string()
+    .min(1, "Calendar ID is required")
+    .regex(/^[\w-]+$/, "Only letters, numbers, dashes and underscores"),
+  ghlBookingCalendarLocationId: z
+    .string()
+    .min(1, "Location ID is required")
+    .regex(/^[\w-]+$/, "Only letters, numbers, dashes and underscores"),
+  ghlBookingCalendarApiKey: z.string().min(10, "Sub-account PIT token is required"),
+})
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required"),
@@ -63,3 +75,4 @@ export type ConnectFormData = z.infer<typeof connectSchema>
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 export type MediaStorageFormData = z.infer<typeof mediaStorageSchema>
 export type GhlConnectionFormData = z.infer<typeof ghlConnectionSchema>
+export type BookingCalendarFormData = z.infer<typeof bookingCalendarSchema>

@@ -41,6 +41,25 @@ export class AuthController {
     }
   }
 
+  async updateBookingCalendar(req: Request, res: Response, next: NextFunction) {
+    try {
+      // NEVER log req.body here — it carries the booking calendar PIT.
+      const result = await authService.updateBookingCalendar(req.user!.agencyId, req.user!.userId, req.body);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getBookingCalendar(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await authService.getBookingCalendarStatus(req.user!.agencyId);
+      res.json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;

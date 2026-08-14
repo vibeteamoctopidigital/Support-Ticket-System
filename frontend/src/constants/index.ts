@@ -20,6 +20,7 @@ export const ROUTES = {
   PORTAL: "/portal",
   ONBOARDING: "/onboarding",
   ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_APPOINTMENTS: "/admin/appointments",
   ADMIN_REQUESTS: "/admin/requests",
   TEAM_DASHBOARD: "/team/dashboard",
   TEAM_BOARD: "/team/board",
@@ -47,6 +48,7 @@ export const API_ENDPOINTS = {
     FIRST_LOGIN_PASSWORD: "/auth/first-login-password",
     MEDIA_STORAGE: "/auth/media-storage",
     GHL_CONNECTION: "/auth/ghl-connection",
+    BOOKING_CALENDAR: "/auth/booking-calendar",
     IMPERSONATE: "/auth/impersonate",
     ME: "/auth/me",
   },
@@ -124,4 +126,5 @@ export const QUERY_KEYS = {
   ANALYTICS: ["analytics"] as const,
   AUDIT_LOGS: ["audit-logs"] as const,
   APPOINTMENTS: (calendarId: string) => ["appointments", calendarId] as const,
+  BOOKING_CALENDAR: ["auth", "booking-calendar"] as const,
 } as const

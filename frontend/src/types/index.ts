@@ -28,6 +28,9 @@ export interface User {
   /** Owner only — whether the media-storage sub-account credentials are saved. */
   mediaStorageConfigured?: boolean
   mediaLocationId?: string | null
+  /** Owner only — whether the booking calendar is connected (appointments need it). */
+  bookingCalendarConfigured?: boolean
+  bookingCalendarId?: string | null
 }
 
 export interface Ticket {
