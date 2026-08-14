@@ -1,7 +1,7 @@
 "use client"
 
 import { formatDistanceToNow } from "date-fns"
-import { Loader2, Plus, TicketCheck } from "lucide-react"
+import { CalendarPlus, Loader2, Plus, TicketCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { AuthGuard } from "@/components/auth/AuthGuard"
@@ -9,23 +9,36 @@ import { AppShell } from "@/components/layouts/AppShell"
 import { TicketDetailModal } from "@/components/tickets/TicketDetailModal"
 import { PriorityBadge, StageBadge } from "@/components/tickets/ticket-bits"
 import { Button } from "@/components/ui/button"
+import { config } from "@/config"
 import { ROUTES } from "@/constants"
 import { useMySubmittedTickets } from "@/hooks/query/useTickets"
+
+const BOOKING_URL = `https://api.leadconnectorhq.com/widget/booking/${config.ghl.calendarId}`
 
 function ClientDashboard() {
   const { data: tickets, isLoading } = useMySubmittedTickets()
   const [openId, setOpenId] = useState<string | null>(null)
   const router = useRouter()
   const openNewTicket = () => router.push(ROUTES.CLIENT_NEW_TICKET)
+  const openBooking = () => window.open(BOOKING_URL, "_blank", "noopener,noreferrer")
 
   return (
     <AppShell
       title="My tickets"
       subtitle="Track every ticket you've submitted and its current stage."
       actions={
-        <Button onClick={openNewTicket} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
-          <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={openBooking}
+            variant="outline"
+            className="rounded-xl border-gray-200 bg-white h-10"
+          >
+            <CalendarPlus className="w-4 h-4 mr-1.5" /> Book an Appointment
+          </Button>
+          <Button onClick={openNewTicket} className="rounded-xl bg-black hover:bg-gray-800 text-white h-10">
+            <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
+          </Button>
+        </div>
       }
     >
       {isLoading ? (
@@ -35,9 +48,14 @@ function ClientDashboard() {
           <TicketCheck className="w-8 h-8 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-600 font-medium text-sm">No tickets yet</p>
           <p className="text-gray-400 text-[12.5px] mt-1">Submit your first ticket and we'll route it to the right person.</p>
-          <Button onClick={openNewTicket} className="mt-5 rounded-xl bg-black hover:bg-gray-800 text-white">
-            <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
-          </Button>
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <Button onClick={openBooking} variant="outline" className="rounded-xl border-gray-200 bg-white">
+              <CalendarPlus className="w-4 h-4 mr-1.5" /> Book an Appointment
+            </Button>
+            <Button onClick={openNewTicket} className="rounded-xl bg-black hover:bg-gray-800 text-white">
+              <Plus className="w-4 h-4 mr-1.5" /> Submit a ticket
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
